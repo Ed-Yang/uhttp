@@ -43,7 +43,7 @@ $ curl http://localhost:8008/jjj.json
 
 ### Hard-coded flags
 ```C
-#define LOCAL_FOLDER "./json" // the mapped folder
+#define LOCAL_FOLDER "./json/" // the mapped folder
 ```
 ### NOTE
 - almost has no error checking

@@ -8,7 +8,7 @@
 
 #define MAX_BUF_SIZE 1024
 #define NAME_LEN 64
-#define LOCAL_FOLDER "./json" // the mapped folder
+#define LOCAL_FOLDER "./json/" // the mapped folder
 
 #ifndef WIN32
 #define closesocket close
@@ -105,6 +105,8 @@ int parse_header(HEADER_INFO_T *header, char *buf)
     p = strchr(h, (int)' ');
     *p = 0;
 
+    if (*h == '/') h += 1; // skip first '/'
+
     if (h[0])
         strcpy(header->fpath, h);
 
@@ -116,8 +118,9 @@ void proc_req(int so)
     int n, len, plen;
     HEADER_INFO_T h_line;
     char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
-    FILE *fp;
+    FILE *fp = NULL;
     char full_path[NAME_LEN * 2];
+    char *status;
 
     // FIXME: recv handling
     n = recv(so, rbuf, MAX_BUF_SIZE, 0);
@@ -127,20 +130,22 @@ void proc_req(int so)
 
     memset(full_path, 0, sizeof(full_path));
 
-    if (h_line.fpath[0] != 0)
+    if (h_line.fpath[0] != 0  && strcmp(h_line.fpath, "/") != 0)
     {
         plen = strlen(LOCAL_FOLDER);
         memcpy(full_path, LOCAL_FOLDER, plen);
         memcpy(&full_path[plen], h_line.fpath, strlen(h_line.fpath));
+
+        fp = fopen(full_path, "rb");
     }
 
-    printf("ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath,
-           full_path);
+    fprintf(stderr, "ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath,
+            full_path);
 
-    fp = fopen(full_path, "rb");
     if (fp != NULL)
     {
-        len = fill_resp_header(sbuf, STATUS_200, AGENT_STR, NULL, CONTENT_JSON);
+        status = STATUS_200;
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, CONTENT_JSON);
         n = send(so, sbuf, len, 0);
 
         while ((len = fread(sbuf, 1, sizeof(sbuf), fp)) > 0)
@@ -152,9 +157,12 @@ void proc_req(int so)
     }
     else
     {
-        len = fill_resp_header(sbuf, STATUS_404, AGENT_STR, NULL, NULL);
+        status = STATUS_404;
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, NULL);
         n = send(so, sbuf, len, 0);
     }
+
+    fprintf(stderr, "STATUS: %s\n", status);
 
     closesocket(so);
 }
@@ -169,7 +177,7 @@ void run_server(uint16_t port)
 
     if ((sock = sock_create(port)) < 0)
     {
-        printf("run_server: sock_create failed !!\n");
+        fprintf(stderr, "run_server: sock_create failed !!\n");
         return;
     }
 
@@ -178,7 +186,7 @@ void run_server(uint16_t port)
     FD_ZERO(&readfds);
     FD_SET(sock, &readfds);
 
-    printf("server is running on %d\n", port);
+    fprintf(stderr, "server is running on %d\n", port);
 
     while ((rv = select(FD_SETSIZE, &readfds, NULL, NULL, NULL)) > 0)
     {
@@ -188,17 +196,15 @@ void run_server(uint16_t port)
             so = accept(sock, (struct sockaddr *)&addr, &fromlen);
             proc_req(so);
 
-            // FD_CLR(sock, &readfds);
-            // FD_SET(sock, &readfds);
         } /* if */
     }
 
-    printf("server stopped\n");
+    fprintf(stderr, "server stopped\n");
 }
 
 void usage(char *s)
 {
-    printf("usage: %s <port>\n", s);
+    fprintf(stderr, "usage: %s <port>\n", s);
 
     return;
 }
