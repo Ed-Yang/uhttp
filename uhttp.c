@@ -1,39 +1,31 @@
+#include <memory.h>
+#include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <memory.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <unistd.h>
 
-#define MAX_BUF_SIZE   1024    
-#define NAME_LEN        64
-#define LOCAL_FOLDER    "./json"
+#define MAX_BUF_SIZE 1024
+#define NAME_LEN 64
+#define LOCAL_FOLDER "./json" // the mapped folder
 
 #ifndef WIN32
-#define closesocket     close
+#define closesocket close
 #endif
 
-#define STATUS_200      "HTTP/1.0 200 OK"
-#define STATUS_404      "HTTP/1.0 404 NOT FOUND"
+#define STATUS_200 "HTTP/1.0 200 OK"
+#define STATUS_404 "HTTP/1.0 404 NOT FOUND"
 
-#define AGENT_STR       "Server: small JSON web server"
+#define AGENT_STR "Server: small JSON web server"
 
-#define CONTENT_JSON    "Content-type: application/json"
-
-int g_http_port = 8008;
-
-const char g_http_header[] =
-    "HTTP/1.0 200 OK\r\n"
-    "Server: BaseHTTP/0.3 Python/2.7.10\r\n"
-    "Date: Thu, 31 Aug 2017 06:52:32 GMT\r\n"
-    "Content-type: application/json\r\n";
+#define CONTENT_JSON "Content-type: application/json"
 
 typedef struct header_info_t
 {
     char action[NAME_LEN];
     char fpath[NAME_LEN];
-    //char date[NAME_LEN];
+    // char date[NAME_LEN];
 } HEADER_INFO_T;
 
 int sock_create(uint16_t port)
@@ -49,7 +41,8 @@ int sock_create(uint16_t port)
     }
 
     optval = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval)) < 0)
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval,
+                   sizeof(optval)) < 0)
     {
         perror("sock_create: setsockopt reuse");
         closesocket(sockfd);
@@ -72,27 +65,28 @@ int sock_create(uint16_t port)
     return sockfd;
 }
 
-int fill_resp_header(char *buf, char *status, char *agent, char *date, char *ctype)
+int fill_resp_header(char *buf, char *status, char *agent, char *date,
+                     char *ctype)
 {
     int n = 0;
 
     if (status)
-        n+= sprintf(buf, "%s\r\n", status);
+        n += sprintf(buf, "%s\r\n", status);
 
     if (agent)
-        n+= sprintf(&buf[n], "%s\r\n", agent);
+        n += sprintf(&buf[n], "%s\r\n", agent);
 
     if (date)
-        n+= sprintf(&buf[n], "%s\r\n", date);
+        n += sprintf(&buf[n], "%s\r\n", date);
 
     if (ctype)
-        n+= sprintf(&buf[n], "%s\r\n", ctype);
+        n += sprintf(&buf[n], "%s\r\n", ctype);
 
     // end of header
     n += sprintf(&buf[n], "\r\n");
-    
+
     return n;
-}   
+}
 
 int parse_header(HEADER_INFO_T *header, char *buf)
 {
@@ -100,28 +94,30 @@ int parse_header(HEADER_INFO_T *header, char *buf)
 
     // GET or POST
     h = buf;
-    p = strchr(h, (int)' '); *p = 0;
-    
+    p = strchr(h, (int)' ');
+    *p = 0;
+
     if (h[0])
         strcpy(header->action, h);
 
     // File
     h = p + 1;
-    p = strchr(h, (int)' '); *p = 0;
+    p = strchr(h, (int)' ');
+    *p = 0;
 
     if (h[0])
-        strcpy(header->fpath, h);    
+        strcpy(header->fpath, h);
 
     return 0;
 }
 
 void proc_req(int so)
 {
-    int n, len, plen ;
+    int n, len, plen;
     HEADER_INFO_T h_line;
-    char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];    
+    char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
     FILE *fp;
-    char full_path[NAME_LEN*2];
+    char full_path[NAME_LEN * 2];
 
     // FIXME: recv handling
     n = recv(so, rbuf, MAX_BUF_SIZE, 0);
@@ -138,19 +134,20 @@ void proc_req(int so)
         memcpy(&full_path[plen], h_line.fpath, strlen(h_line.fpath));
     }
 
-    printf("ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath, full_path);
+    printf("ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath,
+           full_path);
 
     fp = fopen(full_path, "rb");
     if (fp != NULL)
     {
         len = fill_resp_header(sbuf, STATUS_200, AGENT_STR, NULL, CONTENT_JSON);
         n = send(so, sbuf, len, 0);
-        
+
         while ((len = fread(sbuf, 1, sizeof(sbuf), fp)) > 0)
         {
             n = send(so, sbuf, len, 0);
         }
-        
+
         fclose(fp);
     }
     else
@@ -169,13 +166,13 @@ void run_server(uint16_t port)
     int sock, so, n, rv;
     struct sockaddr_in addr;
     socklen_t fromlen = sizeof(addr);
-    
+
     if ((sock = sock_create(port)) < 0)
     {
         printf("run_server: sock_create failed !!\n");
-        return ;
+        return;
     }
-    
+
     listen(sock, 5);
 
     FD_ZERO(&readfds);
@@ -191,8 +188,8 @@ void run_server(uint16_t port)
             so = accept(sock, (struct sockaddr *)&addr, &fromlen);
             proc_req(so);
 
-            //FD_CLR(sock, &readfds);
-            //FD_SET(sock, &readfds);
+            // FD_CLR(sock, &readfds);
+            // FD_SET(sock, &readfds);
         } /* if */
     }
 
@@ -203,7 +200,7 @@ void usage(char *s)
 {
     printf("usage: %s <port>\n", s);
 
-    return ;
+    return;
 }
 
 int main(int argc, char *argv[])
