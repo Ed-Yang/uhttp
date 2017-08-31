@@ -23,6 +23,8 @@ The http header filed of this sample code is based on the message of Python Base
 
 ### Build (debug version)
 ```
+$ git clone https://github.com/Ed-Yang/uhttp.git
+$ cd uhttp
 $ gcc -g uhttp.c -o uhttp
 ```
 ### Run
