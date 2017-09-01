@@ -45,7 +45,11 @@ $ curl http://localhost:8008/jjj.json
 
 ### Hard-coded flags
 ```C
+#ifdef WIN32
+#define LOCAL_FOLDER ".\\json\\" // the mapped folder
+#else
 #define LOCAL_FOLDER "./json/" // the mapped folder
+#endif
 ```
 ### NOTE
 - almost has no error checking
