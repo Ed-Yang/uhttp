@@ -1,4 +1,11 @@
 uhttp
 *.dSYM
 *.bak
+Debug
+deb
+build
+nmake
+
+
+
 

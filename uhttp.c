@@ -1,17 +1,28 @@
 #include <memory.h>
-#include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef WIN32
+#include <winsock.h>
+//#include <WS2tcpip.h> // socklen_t
+#else
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+
+#define closesocket close
+
+#endif
+
 #define MAX_BUF_SIZE 1024
 #define NAME_LEN 64
-#define LOCAL_FOLDER "./json/" // the mapped folder
 
-#ifndef WIN32
-#define closesocket close
+#ifdef WIN32
+#define LOCAL_FOLDER ".\\json\\" // the mapped folder
+#else
+#define LOCAL_FOLDER "./json/" // the mapped folder
 #endif
 
 #define STATUS_200 "HTTP/1.0 200 OK"
@@ -69,28 +80,95 @@ int fill_resp_header(char *buf, char *status, char *agent, char *date,
                      char *ctype)
 {
     int n = 0;
+    int remain_size = MAX_BUF_SIZE;
 
     if (status)
-        n += sprintf(buf, "%s\r\n", status);
+    {
+        n += snprintf(buf, remain_size, "%s\r\n", status);
+        remain_size -= n;
+    }
 
     if (agent)
-        n += sprintf(&buf[n], "%s\r\n", agent);
+    {
+        n += snprintf(&buf[n], remain_size, "%s\r\n", agent);
+        remain_size -= n;
+    }
 
     if (date)
-        n += sprintf(&buf[n], "%s\r\n", date);
+    {
+        n += snprintf(&buf[n], remain_size, "%s\r\n", date);
+    }
 
     if (ctype)
-        n += sprintf(&buf[n], "%s\r\n", ctype);
-
+    {
+        n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
+        remain_size -= n;
+    }
     // end of header
-    n += sprintf(&buf[n], "\r\n");
+    n += snprintf(&buf[n], remain_size, "\r\n");
 
     return n;
 }
 
-int parse_header(HEADER_INFO_T *header, char *buf)
+int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
+{
+    char *s, *p;
+    int found = FALSE;
+    int hlen, cont_len, rlen;
+    int i, n;
+
+    // FIXME: recv handling
+    memset(rbuf, 0, rbuf_len);
+    rlen = 0;
+    while ((n = recv(so, &rbuf[rlen], MAX_BUF_SIZE - rlen, 0)) > 0)
+    {
+        if (!found && n < 4) continue;
+
+        // find delimeter
+        p = &rbuf[rlen];
+        rlen += n;
+
+        for (i = 0; i < n - 3; i++, p++)
+        {
+            if (*p == '\r' && *(p + 1) == '\n' && *(p + 2) == '\r' && *(p + 3) == '\n')
+            {
+                found = TRUE;
+                hlen = (int)(p - &rbuf[0]) + 4;
+                break;
+            }
+        }
+
+        if (found)
+            break; // while
+    }
+
+    // find Content-length
+    *content_len = 0;
+    if (content_len != NULL && (s = strstr(rbuf, "Content-Length: ")) != NULL)
+    {
+        s = s + strlen("Content-Length: ");
+        cont_len = atoi(s);
+        *content_len = cont_len;
+
+        // check if all data is received
+        if (rlen < (hlen + cont_len))
+        {
+            n = (hlen + cont_len) - rlen;
+            if ((n = recv(so, &rbuf[rlen], n, 0)) > 0)
+                rlen += n;
+            else
+                rlen = -1;
+        }
+    }
+
+    return rlen;
+}
+
+int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 {
     char *h, *p;
+    int len;
+    int remaining = 0;
 
     // GET or POST
     h = buf;
@@ -98,39 +176,49 @@ int parse_header(HEADER_INFO_T *header, char *buf)
     *p = 0;
 
     if (h[0])
-        strcpy(header->action, h);
+    {
+        len = strlen(h) > NAME_LEN ? NAME_LEN - 1: strlen(h);
+        memcpy(header->action, h, len);
+    }
 
     // File
     h = p + 1;
     p = strchr(h, (int)' ');
     *p = 0;
 
-    if (*h == '/') h += 1; // skip first '/'
+    if (*h == '/')
+        h += 1; // skip first '/'
 
     if (h[0])
-        strcpy(header->fpath, h);
+    {
+        len = strlen(h) > NAME_LEN ? NAME_LEN - 1 : strlen(h);
+        memcpy(header->fpath, h, len);
+    }
 
     return 0;
 }
 
+
 void proc_req(int so)
 {
-    int n, len, plen;
+    int i, n, len, plen;
     HEADER_INFO_T h_line;
     char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
     FILE *fp = NULL;
     char full_path[NAME_LEN * 2];
     char *status;
+    int rlen, clen;    
 
-    // FIXME: recv handling
-    n = recv(so, rbuf, MAX_BUF_SIZE, 0);
+    rlen = recv_http_message(so, rbuf, MAX_BUF_SIZE, &clen);
+    if (rlen < 0)
+        return;
 
     memset(&h_line, 0, sizeof(h_line));
-    parse_header(&h_line, rbuf);
+    parse_header(&h_line, rbuf, rlen);
 
     memset(full_path, 0, sizeof(full_path));
 
-    if (h_line.fpath[0] != 0  && strcmp(h_line.fpath, "/") != 0)
+    if (h_line.fpath[0] != 0 && strcmp(h_line.fpath, "/") != 0)
     {
         plen = strlen(LOCAL_FOLDER);
         memcpy(full_path, LOCAL_FOLDER, plen);
@@ -141,6 +229,12 @@ void proc_req(int so)
 
     fprintf(stderr, "ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath,
             full_path);
+
+    if (clen > 0)
+    {
+        fprintf(stderr, "DATA: -----------------------\n");
+        fprintf(stderr, "%s\n", &rbuf[rlen-clen]);
+    }
 
     if (fp != NULL)
     {
@@ -170,10 +264,9 @@ void proc_req(int so)
 void run_server(uint16_t port)
 {
     fd_set readfds;
-    struct timeval tv;
-    int sock, so, n, rv;
+    int sock, so, rv;
     struct sockaddr_in addr;
-    socklen_t fromlen = sizeof(addr);
+    int fromlen = sizeof(addr);
 
     if ((sock = sock_create(port)) < 0)
     {
@@ -211,6 +304,15 @@ void usage(char *s)
 
 int main(int argc, char *argv[])
 {
+#ifdef WIN32
+    WSADATA wsaData;
+    WORD wVersionRequested;
+    int err;
+
+    wVersionRequested = MAKEWORD(2, 2);
+    err = WSAStartup(wVersionRequested, &wsaData);
+#endif
+
     if (argc != 2)
     {
         usage(argv[0]);
