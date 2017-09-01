@@ -16,16 +16,29 @@ The http header filed of this sample code is based on the message of Python Base
 "Content-type: application/json\r\n"
 ```
 
-## Usage
-
-```
-```
-
 ### Build (debug version)
+
 ```
+# Linux
+
 $ git clone https://github.com/Ed-Yang/uhttp.git
 $ cd uhttp
 $ gcc -g uhttp.c -o uhttp
+
+# CMAKE (Windows)
+
+mkdir build-win
+cd build-win
+cmake -G "NMake Makefiles" ..
+nmake
+
+# CMAKE (Windows)
+
+mkdir build
+cd build
+cmake ..
+make
+
 ```
 ### Run
 ```

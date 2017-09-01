@@ -4,6 +4,7 @@ uhttp
 Debug
 deb
 build
+build-win
 nmake
 
 
