@@ -8,6 +8,7 @@ build-win
 nmake
 tmp
 Win32
+macos
 .cmaketools.json
 
 

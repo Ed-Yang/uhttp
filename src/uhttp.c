@@ -255,9 +255,9 @@ void proc_req(int so)
 
     // try method and file
 
-    if (h_line.method[0] == NULL || (fp = fopen(h_line.method, "rb")) == NULL)
+    if (h_line.method[0] == 0 || (fp = fopen(h_line.method, "rb")) == NULL)
     {
-        if (h_line.fpath[0] != NULL)
+        if (h_line.fpath[0] != 0)
             fp = fopen(h_line.fpath, "rb");
     }
 

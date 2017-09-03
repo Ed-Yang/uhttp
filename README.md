@@ -43,6 +43,10 @@ $ gcc -g uhttp.c -o uhttp
 ```
 
 ### CMAKE (VC IDE)
+
+Open a "VC Developer Command Window" or in cmd windows run vc environment batch
+file, like vcvars32.bat.
+
 ```
 mkdir vc
 cd vc
@@ -51,6 +55,10 @@ Use IDE to open uhttp.sln
 ```
 
 ### CMAKE (Windows - NMake)
+
+Open a "VC Developer Command Window" or in cmd windows run vc environment batch
+file, like vcvars32.bat.
+
 ```
 mkdir nmake
 cd nmake
@@ -68,6 +76,16 @@ cmake ..
 make
 cd ..
 ./build/uhttp 80
+```
+
+### CMAKE (macOS)
+```
+mkdir macos
+cd macos
+cmake ..
+make
+cd ..
+./macos/uhttp 80
 ```
 
 ## CURL
