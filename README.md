@@ -16,54 +16,81 @@ The http header filed of this sample code is based on the message of Python Base
 "Content-type: application/json\r\n"
 ```
 
-### Build (debug version)
-
+## Directory
 ```
-# Linux
+
+uhttp
+├── json        <-- file in URL line
+├── src         <-- source code
+└── web-data    <-- method response files
+```
+
+The server will parse the content and if "method:" is found, it will try to 
+respond with "web-data/<method>.json" or it will try get respond with
+"json/<url-file-portion>"
+
+## Build & Run (debug version)
+
+Get source code from GitHub
 
 $ git clone https://github.com/Ed-Yang/uhttp.git
+
+### Linux (build in command line)
+
+```
 $ cd uhttp
 $ gcc -g uhttp.c -o uhttp
+```
 
-# CMAKE (Windows)
+### CMAKE (VC IDE)
+```
+mkdir vc
+cd vc
+cmake  ..
+Use IDE to open uhttp.sln
+```
 
-mkdir build-win
-cd build-win
+### CMAKE (Windows - NMake)
+```
+mkdir nmake
+cd nmake
 cmake -G "NMake Makefiles" ..
 nmake
+cd ..
+.\nmake\uhttp 80
+```
 
-# CMAKE (Windows)
-
+### CMAKE (Linux)
+```
 mkdir build
 cd build
 cmake ..
 make
-
-```
-### Run
-```
-$ ./uhttp 8008
-server is running on 8008
+cd ..
+./build/uhttp 80
 ```
 
-### client (GET)
+## CURL
 ```
 # install curl
 $ sudo apt-get install curl
 
 # Get a json file 'jjj.json'
-
 $ curl http://localhost:8008/jjj.json
 ```
 
-### Hard-coded flags
-```C
-#ifdef WIN32
-#define LOCAL_FOLDER ".\\json\\" // the mapped folder
-#else
-#define LOCAL_FOLDER "./json/" // the mapped folder
-#endif
+## Build web-data
+
+The script sample command is listed in script.txt.
+
+For example:
 ```
-### NOTE
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"systemUtility.config.systemInfo.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o systemUtility.config.systemInfo.get.json
+```
+
+if it has to provide username/passwrd, add option "-u username:password".
+
+## NOTE
 - almost has no error checking
 - ...
+

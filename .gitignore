@@ -6,6 +6,12 @@ deb
 build
 build-win
 nmake
+tmp
+Win32
+.cmaketools.json
+
+
+
 
 
 

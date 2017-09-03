@@ -25,6 +25,13 @@
 #define LOCAL_FOLDER "./json/" // the mapped folder
 #endif
 
+#ifdef WIN32
+#define METHOD_FOLDER ".\\web-data\\" // the mapped folder
+#else
+#define METHOD_FOLDER "./web-data/" // the mapped folder
+#endif
+
+
 #define STATUS_200 "HTTP/1.0 200 OK"
 #define STATUS_404 "HTTP/1.0 404 NOT FOUND"
 
@@ -36,6 +43,7 @@ typedef struct header_info_t
 {
     char action[NAME_LEN];
     char fpath[NAME_LEN];
+    char method[NAME_LEN];
     // char date[NAME_LEN];
 } HEADER_INFO_T;
 
@@ -99,15 +107,15 @@ int fill_resp_header(char *buf, char *status, char *agent, char *date,
         n += snprintf(&buf[n], remain_size, "%s\r\n", date);
     }
 
-    if (ctype)
-    {
-        n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
-        remain_size -= n;
-    }
-    // end of header
-    n += snprintf(&buf[n], remain_size, "\r\n");
+if (ctype)
+{
+    n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
+    remain_size -= n;
+}
+// end of header
+n += snprintf(&buf[n], remain_size, "\r\n");
 
-    return n;
+return n;
 }
 
 int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
@@ -170,29 +178,49 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
     int len;
     int remaining = 0;
 
+    memset(header, 0, sizeof(HEADER_INFO_T));
+
     // GET or POST
     h = buf;
     p = strchr(h, (int)' ');
-    *p = 0;
+    //*p = 0;
 
     if (h[0])
     {
-        len = strlen(h) > NAME_LEN ? NAME_LEN - 1: strlen(h);
+        len = (int)(p-h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
         memcpy(header->action, h, len);
     }
 
     // File
     h = p + 1;
     p = strchr(h, (int)' ');
-    *p = 0;
+    //*p = 0;
 
     if (*h == '/')
         h += 1; // skip first '/'
 
     if (h[0])
     {
-        len = strlen(h) > NAME_LEN ? NAME_LEN - 1 : strlen(h);
-        memcpy(header->fpath, h, len);
+        len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
+
+        memcpy(header->fpath, LOCAL_FOLDER, strlen(LOCAL_FOLDER));
+        memcpy(&header->fpath[strlen(LOCAL_FOLDER)], h, len);
+    }
+
+    // Method
+    if ((h=strstr(buf, "\"method\":")) != NULL)
+    {
+        h += strlen("\"method\":");
+        h++; // skip '"'
+        if ((p = strchr(h, '"')) != NULL)
+        {
+            len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
+
+            memcpy(header->method, METHOD_FOLDER, strlen(METHOD_FOLDER));
+            memcpy(&header->method[strlen(METHOD_FOLDER)], h, len);
+            // append .json
+            strcat(header->method, ".json");
+        }
     }
 
     return 0;
@@ -201,11 +229,11 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 
 void proc_req(int so)
 {
-    int i, n, len, plen;
+    int n, len;
     HEADER_INFO_T h_line;
     char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
     FILE *fp = NULL;
-    char full_path[NAME_LEN * 2];
+    //char full_path[NAME_LEN * 2];
     char *status;
     int rlen, clen;    
 
@@ -216,19 +244,15 @@ void proc_req(int so)
     memset(&h_line, 0, sizeof(h_line));
     parse_header(&h_line, rbuf, rlen);
 
-    memset(full_path, 0, sizeof(full_path));
+    // try method and file
 
-    if (h_line.fpath[0] != 0 && strcmp(h_line.fpath, "/") != 0)
+    if (h_line.method[0] == NULL || (fp = fopen(h_line.method, "rb")) == NULL)
     {
-        plen = strlen(LOCAL_FOLDER);
-        memcpy(full_path, LOCAL_FOLDER, plen);
-        memcpy(&full_path[plen], h_line.fpath, strlen(h_line.fpath));
-
-        fp = fopen(full_path, "rb");
+        if (h_line.fpath[0] != NULL)
+            fp = fopen(h_line.fpath, "rb");
     }
 
-    fprintf(stderr, "ACTION: %s, PATH: %s: %s\n", h_line.action, h_line.fpath,
-            full_path);
+    fprintf(stderr, "ACTION: %s, PATH: %s\n", h_line.action, h_line.fpath);
 
     if (clen > 0)
     {

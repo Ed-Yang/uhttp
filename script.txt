@@ -1,0 +1,20 @@
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"systemUtility.config.systemInfo.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o systemUtility.config.systemInfo.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"fan.status.speed.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o fan.status.speed.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"dns.config.server.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o dns.config.server.get.json
+
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"ip.config.route.ipv4.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o ip.config.route.ipv4.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"ip.status.route.ipv4.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o ip.status.route.ipv4.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"firmware.status.image.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o firmware.status.image.get.json
+
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"ip.config.interface.ipv4.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o ip.config.interface.ipv4.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"ip.status.interface.ipv4.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o ip.status.interface.ipv4.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"ip.status.interface.link.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o ip.status.interface.link.get.json
+
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"accessManagement.config.ipv4.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o accessManagement.config.ipv4.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"accessManagement.config.ipv6.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o accessManagement.config.ipv6.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"accessManagement.config.global.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o accessManagement.config.global.get.json
+curl 172.16.1.140/json_rpc -X POST --data "{\"method\":\"systemUtility.status.systemUptime.get\",\"params\":[],\"id\":\"jsonrpc\"}" -o systemUtility.status.systemUptime.get.json
+
+#curl localhost/json_rpc -H "Content-Type: application/x-www-form-urlencoded" -X POST --data "{\"method\":\"systemUtility.config.systemInfo.get\",\"params\":[],\"id\":\"jsonrpc\"}" 
+#curl 172.16.1.140/json_rpc -trace --http1.1 -H "Content-Type: application/x-www-form-urlencoded" -X POST --data "{\"method\":\"systemUtility.config.systemInfo.get\",\"params\":[],\"id\":\"jsonrpc\"}" 
+

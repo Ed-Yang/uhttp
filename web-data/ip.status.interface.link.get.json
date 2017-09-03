@@ -1,0 +1,1 @@
+{"id":"jsonrpc","error":null,"result":[{"key":"VLAN 1","val":{"osInterfaceIndex":4,"mtu":1500,"macAddress":"00:08:07:19:02:00","up":true,"broadcast":true,"loopback":false,"running":false,"noarp":false,"promisc":false,"multicast":true}}]}

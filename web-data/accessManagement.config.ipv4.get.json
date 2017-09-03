@@ -1,0 +1,1 @@
+{"id":"jsonrpc","error":null,"result":[{"key":1,"val":{"VlanId":0,"StartAddress":"10.10.1.141","EndAddress":"10.10.1.141","WebServices":true,"SnmpServices":true,"TelnetServices":true}},{"key":2,"val":{"VlanId":0,"StartAddress":"10.10.1.129","EndAddress":"10.10.1.129","WebServices":true,"SnmpServices":true,"TelnetServices":true}}]}

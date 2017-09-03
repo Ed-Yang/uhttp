@@ -1,0 +1,1 @@
+{"id":"jsonrpc","error":null,"result":[{"key":"VLAN 1","val":{"active":true,"enableDhcpClient":false,"DhcpClientFlag":"none","ipv4Address":"10.10.1.194","prefixSize":24,"dhcpClientFallbackTimeout":0}}]}

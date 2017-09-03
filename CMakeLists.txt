@@ -13,7 +13,7 @@ if(WIN32)
 set(W32_LIBS ${W32_LIBS} "wsock32" "Ws2_32")
 endif()
 
-file(GLOB UHTTP_SRC "./*.c")
+file(GLOB UHTTP_SRC "./src/*.c")
 
 add_executable(uhttp ${UHTTP_SRC})
 
