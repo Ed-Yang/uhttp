@@ -3,6 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+#ifndef TRUE
+#define TRUE        1
+#endif
+
+#ifndef FALSE
+#define FALSE       0
+#endif
+
 #ifdef WIN32
 #include <winsock.h>
 //#include <WS2tcpip.h> // socklen_t
@@ -290,7 +299,7 @@ void run_server(uint16_t port)
     fd_set readfds;
     int sock, so, rv;
     struct sockaddr_in addr;
-    int fromlen = sizeof(addr);
+    unsigned int fromlen = sizeof(addr);
 
     if ((sock = sock_create(port)) < 0)
     {
