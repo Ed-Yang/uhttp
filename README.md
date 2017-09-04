@@ -18,6 +18,11 @@ The http header filed of this sample code is based on the message of Python Base
 ## Usage
 
 ```
+Default:
+    <port>: 8008
+     <local-file-folder>: ./local
+     <method-folder>: ./web-data
+
 uhttp -p <port> -l <local-file-folder> -m <method-folder>
 ```
 
@@ -71,7 +76,7 @@ cd nmake
 cmake -G "NMake Makefiles" ..
 nmake
 cd ..
-.\nmake\uhttp 80
+.\nmake\uhttp -p 80
 ```
 
 ### CMAKE (Linux)
@@ -81,7 +86,7 @@ cd build
 cmake ..
 make
 cd ..
-./build/uhttp 80
+./build/uhttp -p 80
 ```
 
 ### CMAKE (macOS)
@@ -91,7 +96,7 @@ cd macos
 cmake ..
 make
 cd ..
-./macos/uhttp 80
+./macos/uhttp -p 80
 ```
 
 ## CURL
