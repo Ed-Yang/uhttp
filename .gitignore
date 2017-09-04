@@ -7,8 +7,10 @@ build
 build-win
 nmake
 tmp
+vc
 Win32
 macos
+trendnet
 .cmaketools.json
 
 

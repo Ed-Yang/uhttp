@@ -15,19 +15,25 @@ The http header filed of this sample code is based on the message of Python Base
 "Date: Thu, 31 Aug 2017 06:52:32 GMT\r\n"
 "Content-type: application/json\r\n"
 ```
+## Usage
+
+```
+uhttp -p <port> -l <local-file-folder> -m <method-folder>
+```
 
 ## Directory
 ```
 
 uhttp
-├── json        <-- file in URL line
+├── local       <-- default folder for URL line
 ├── src         <-- source code
-└── web-data    <-- method response files
+├── getopt      <-- copied from public domain
+└── web-data    <-- default folder for method response files
 ```
 
 The server will parse the content and if "method:" is found, it will try to 
 respond with "web-data/<method>.json" or it will try get respond with
-"json/<url-file-portion>"
+"local/<url-file-portion>"
 
 ## Build & Run (debug version)
 

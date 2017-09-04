@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "getopt.h"
+
+#define UHTTP_DEF_PORT 8008
 
 #ifndef TRUE
 #define TRUE        1
@@ -14,7 +17,6 @@
 
 #ifdef WIN32
 #include <winsock.h>
-//#include <WS2tcpip.h> // socklen_t
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -28,25 +30,16 @@
 #define MAX_BUF_SIZE 1024
 #define NAME_LEN 64
 
-#ifdef WIN32
-#define LOCAL_FOLDER ".\\json\\" // the mapped folder
-#else
-#define LOCAL_FOLDER "./json/" // the mapped folder
-#endif
-
-#ifdef WIN32
-#define METHOD_FOLDER ".\\web-data\\" // the mapped folder
-#else
+#define LOCAL_FOLDER "./local/" // the mapped folder
 #define METHOD_FOLDER "./web-data/" // the mapped folder
-#endif
-
 
 #define STATUS_200 "HTTP/1.0 200 OK"
 #define STATUS_404 "HTTP/1.0 404 NOT FOUND"
 
 #define AGENT_STR "Server: small JSON web server"
 
-#define CONTENT_JSON "Content-type: application/json"
+#define CONTENT_JSON "Content-Type: application/json"
+#define CONTENT_HTML "Content-Type: text/html"
 
 typedef struct header_info_t
 {
@@ -55,6 +48,9 @@ typedef struct header_info_t
     char method[NAME_LEN];
     // char date[NAME_LEN];
 } HEADER_INFO_T;
+
+char g_local_folder[64], g_method_folder[64];
+
 
 int sock_create(uint16_t port)
 {
@@ -184,9 +180,11 @@ int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
 int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 {
     char *h, *p;
-    int len;
+    int i,j,len;
     int remaining = 0;
+    char tempbuf[64];
 
+    memset(tempbuf, 0, sizeof(tempbuf));
     memset(header, 0, sizeof(HEADER_INFO_T));
 
     // GET or POST
@@ -212,8 +210,30 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
     {
         len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
 
-        memcpy(header->fpath, LOCAL_FOLDER, strlen(LOCAL_FOLDER));
-        memcpy(&header->fpath[strlen(LOCAL_FOLDER)], h, len);
+        memcpy(tempbuf, g_local_folder, strlen(g_local_folder));
+        memcpy(&tempbuf[strlen(g_local_folder)], h, len);
+
+#ifdef WIN32
+        // slash or backslash
+        len = strlen(tempbuf);
+
+        for (i=0, j=0; i < len; i++, j++)     
+        {
+            if (tempbuf[i] == '/')
+            {
+                header->fpath[j] = '\\';
+                //header->fpath[j+1] = '\\'; j++;
+                
+            }
+            else
+            {
+                header->fpath[j] = tempbuf[i];
+            }            
+        }
+#else
+        strcpy(header->fpath, tempbuf);
+#endif
+
     }
 
     // Method
@@ -225,8 +245,8 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
         {
             len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
 
-            memcpy(header->method, METHOD_FOLDER, strlen(METHOD_FOLDER));
-            memcpy(&header->method[strlen(METHOD_FOLDER)], h, len);
+            memcpy(header->method, g_method_folder, strlen(g_method_folder));
+            memcpy(&header->method[strlen(g_method_folder)], h, len);
             // append .json
             strcat(header->method, ".json");
         }
@@ -235,7 +255,6 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
     return 0;
 }
 
-
 void proc_req(int so)
 {
     int n, len;
@@ -243,11 +262,11 @@ void proc_req(int so)
     char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
     FILE *fp = NULL;
     //char full_path[NAME_LEN * 2];
-    char *status;
+    char *status, *pcont = CONTENT_HTML;
     int rlen, clen;    
 
     rlen = recv_http_message(so, rbuf, MAX_BUF_SIZE, &clen);
-    if (rlen < 0)
+    if (rlen <= 0)
         return;
 
     memset(&h_line, 0, sizeof(h_line));
@@ -258,21 +277,28 @@ void proc_req(int so)
     if (h_line.method[0] == 0 || (fp = fopen(h_line.method, "rb")) == NULL)
     {
         if (h_line.fpath[0] != 0)
+        {
             fp = fopen(h_line.fpath, "rb");
+            pcont = CONTENT_HTML;
+        }
+    }
+    else
+    {
+        pcont = CONTENT_JSON;
     }
 
-    fprintf(stderr, "ACTION: %s, PATH: %s\n", h_line.action, h_line.fpath);
+    fprintf(stderr, "> received %s, url path: %s\n", h_line.action, h_line.fpath);
 
     if (clen > 0)
     {
-        fprintf(stderr, "DATA: -----------------------\n");
-        fprintf(stderr, "%s\n", &rbuf[rlen-clen]);
+        fprintf(stderr, "content: -----------------------\n");
+        fprintf(stderr, "%s\n\n", &rbuf[rlen-clen]);
     }
 
     if (fp != NULL)
     {
         status = STATUS_200;
-        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, CONTENT_JSON);
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, pcont);
         n = send(so, sbuf, len, 0);
 
         while ((len = fread(sbuf, 1, sizeof(sbuf), fp)) > 0)
@@ -285,7 +311,7 @@ void proc_req(int so)
     else
     {
         status = STATUS_404;
-        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, NULL);
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, CONTENT_HTML);
         n = send(so, sbuf, len, 0);
     }
 
@@ -330,13 +356,17 @@ void run_server(uint16_t port)
 
 void usage(char *s)
 {
-    fprintf(stderr, "usage: %s <port>\n", s);
+    fprintf(stderr, "usage: %s -p <port> -l <local-file-folder> -m <method-folder>\n", s);
 
     return;
 }
 
 int main(int argc, char *argv[])
 {
+    int c;
+    int port;
+    char tempdir[128];
+
 #ifdef WIN32
     WSADATA wsaData;
     WORD wVersionRequested;
@@ -346,13 +376,49 @@ int main(int argc, char *argv[])
     err = WSAStartup(wVersionRequested, &wsaData);
 #endif
 
-    if (argc != 2)
+    // default value
+    port = UHTTP_DEF_PORT;
+
+    memset(g_local_folder, 0, sizeof(g_local_folder));    
+    strcpy(g_local_folder, LOCAL_FOLDER);
+
+    memset(g_method_folder, 0, sizeof(g_method_folder));
+    strcpy(g_method_folder, METHOD_FOLDER);
+
+    while ((c = getopt(argc, argv, "p:l:m:h?")) != -1)
     {
-        usage(argv[0]);
-        exit(0);
+        switch (c)
+        {
+        case 'p':
+            port = atoi(optarg);
+            break;
+        case 'l':
+            strcpy(g_local_folder, optarg);
+            if (g_local_folder[strlen(g_local_folder)] != '/')
+                g_local_folder[strlen(g_local_folder)] = '/';
+            break;            
+        case 'm':
+            strcpy(g_method_folder, optarg);
+            if (g_method_folder[strlen(g_local_folder)] != '/')
+                g_method_folder[strlen(g_local_folder)] = '/';
+
+            break;            
+
+        case 'h':
+        case '?':
+        default:
+            usage(argv[0]);
+            return -1;
+        }
     }
 
-    run_server(atoi(argv[1]));
+#ifdef WIN32
+    fprintf(stderr, "working direcotry: %s\n", _getcwd(tempdir));
+#endif
+
+    fprintf(stderr, "local folder: %s, method folder: %s\n", g_local_folder, g_method_folder);
+
+    run_server(port);
 
     return (0);
 }
