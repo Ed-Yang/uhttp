@@ -395,13 +395,13 @@ int main(int argc, char *argv[])
             break;
         case 'l':
             strcpy(g_local_folder, optarg);
-            if (g_local_folder[strlen(g_local_folder)] != '/')
+            if (g_local_folder[strlen(g_local_folder)-1] != '/')
                 g_local_folder[strlen(g_local_folder)] = '/';
             break;
         case 'm':
             strcpy(g_method_folder, optarg);
-            if (g_method_folder[strlen(g_local_folder)] != '/')
-                g_method_folder[strlen(g_local_folder)] = '/';
+            if (g_method_folder[strlen(g_method_folder)-1] != '/')
+                g_method_folder[strlen(g_method_folder)] = '/';
 
             break;
 
