@@ -8,11 +8,11 @@
 #define UHTTP_DEF_PORT 8008
 
 #ifndef TRUE
-#define TRUE        1
+#define TRUE 1
 #endif
 
 #ifndef FALSE
-#define FALSE       0
+#define FALSE 0
 #endif
 
 #ifdef WIN32
@@ -22,7 +22,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-
 #define closesocket close
 
 #endif
@@ -30,7 +29,7 @@
 #define MAX_BUF_SIZE 1024
 #define NAME_LEN 64
 
-#define LOCAL_FOLDER "./local/" // the mapped folder
+#define LOCAL_FOLDER "./local/"     // the mapped folder
 #define METHOD_FOLDER "./web-data/" // the mapped folder
 
 #define STATUS_200 "HTTP/1.0 200 OK"
@@ -50,7 +49,6 @@ typedef struct header_info_t
 } HEADER_INFO_T;
 
 char g_local_folder[64], g_method_folder[64];
-
 
 int sock_create(uint16_t port)
 {
@@ -112,15 +110,15 @@ int fill_resp_header(char *buf, char *status, char *agent, char *date,
         n += snprintf(&buf[n], remain_size, "%s\r\n", date);
     }
 
-if (ctype)
-{
-    n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
-    remain_size -= n;
-}
-// end of header
-n += snprintf(&buf[n], remain_size, "\r\n");
+    if (ctype)
+    {
+        n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
+        remain_size -= n;
+    }
+    // end of header
+    n += snprintf(&buf[n], remain_size, "\r\n");
 
-return n;
+    return n;
 }
 
 int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
@@ -135,7 +133,8 @@ int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
     rlen = 0;
     while ((n = recv(so, &rbuf[rlen], MAX_BUF_SIZE - rlen, 0)) > 0)
     {
-        if (!found && n < 4) continue;
+        if (!found && n < 4)
+            continue;
 
         // find delimeter
         p = &rbuf[rlen];
@@ -143,7 +142,8 @@ int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
 
         for (i = 0; i < n - 3; i++, p++)
         {
-            if (*p == '\r' && *(p + 1) == '\n' && *(p + 2) == '\r' && *(p + 3) == '\n')
+            if (*p == '\r' && *(p + 1) == '\n' && *(p + 2) == '\r' &&
+                *(p + 3) == '\n')
             {
                 found = TRUE;
                 hlen = (int)(p - &rbuf[0]) + 4;
@@ -180,7 +180,7 @@ int recv_http_message(int so, char *rbuf, int rbuf_len, int *content_len)
 int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 {
     char *h, *p;
-    int i,j,len;
+    int i, j, len;
     int remaining = 0;
     char tempbuf[64];
 
@@ -194,7 +194,7 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 
     if (h[0])
     {
-        len = (int)(p-h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
+        len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
         memcpy(header->action, h, len);
     }
 
@@ -217,27 +217,25 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
         // slash or backslash
         len = strlen(tempbuf);
 
-        for (i=0, j=0; i < len; i++, j++)     
+        for (i = 0, j = 0; i < len; i++, j++)
         {
             if (tempbuf[i] == '/')
             {
                 header->fpath[j] = '\\';
-                //header->fpath[j+1] = '\\'; j++;
-                
+                // header->fpath[j+1] = '\\'; j++;
             }
             else
             {
                 header->fpath[j] = tempbuf[i];
-            }            
+            }
         }
 #else
         strcpy(header->fpath, tempbuf);
 #endif
-
     }
 
     // Method
-    if ((h=strstr(buf, "\"method\":")) != NULL)
+    if ((h = strstr(buf, "\"method\":")) != NULL)
     {
         h += strlen("\"method\":");
         h++; // skip '"'
@@ -261,9 +259,9 @@ void proc_req(int so)
     HEADER_INFO_T h_line;
     char rbuf[MAX_BUF_SIZE], sbuf[MAX_BUF_SIZE];
     FILE *fp = NULL;
-    //char full_path[NAME_LEN * 2];
+    // char full_path[NAME_LEN * 2];
     char *status, *pcont = CONTENT_HTML;
-    int rlen, clen;    
+    int rlen, clen;
 
     rlen = recv_http_message(so, rbuf, MAX_BUF_SIZE, &clen);
     if (rlen <= 0)
@@ -287,12 +285,13 @@ void proc_req(int so)
         pcont = CONTENT_JSON;
     }
 
-    fprintf(stderr, "> received %s, url path: %s\n", h_line.action, h_line.fpath);
+    fprintf(stderr, "> received %s, url path: %s\n", h_line.action,
+            h_line.fpath);
 
     if (clen > 0)
     {
         fprintf(stderr, "content: -----------------------\n");
-        fprintf(stderr, "%s\n\n", &rbuf[rlen-clen]);
+        fprintf(stderr, "%s\n\n", &rbuf[rlen - clen]);
     }
 
     if (fp != NULL)
@@ -356,7 +355,9 @@ void run_server(uint16_t port)
 
 void usage(char *s)
 {
-    fprintf(stderr, "usage: %s -p <port> -l <local-file-folder> -m <method-folder>\n", s);
+    fprintf(stderr,
+            "usage: %s -p <port> -l <local-file-folder> -m <method-folder>\n",
+            s);
 
     return;
 }
@@ -379,7 +380,7 @@ int main(int argc, char *argv[])
     // default value
     port = UHTTP_DEF_PORT;
 
-    memset(g_local_folder, 0, sizeof(g_local_folder));    
+    memset(g_local_folder, 0, sizeof(g_local_folder));
     strcpy(g_local_folder, LOCAL_FOLDER);
 
     memset(g_method_folder, 0, sizeof(g_method_folder));
@@ -396,13 +397,13 @@ int main(int argc, char *argv[])
             strcpy(g_local_folder, optarg);
             if (g_local_folder[strlen(g_local_folder)] != '/')
                 g_local_folder[strlen(g_local_folder)] = '/';
-            break;            
+            break;
         case 'm':
             strcpy(g_method_folder, optarg);
             if (g_method_folder[strlen(g_local_folder)] != '/')
                 g_method_folder[strlen(g_local_folder)] = '/';
 
-            break;            
+            break;
 
         case 'h':
         case '?':
@@ -416,7 +417,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "working direcotry: %s\n", _getcwd(tempdir));
 #endif
 
-    fprintf(stderr, "local folder: %s, method folder: %s\n", g_local_folder, g_method_folder);
+    fprintf(stderr, "local folder: %s, method folder: %s\n", g_local_folder,
+            g_method_folder);
 
     run_server(port);
 
