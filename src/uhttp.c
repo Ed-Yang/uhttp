@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <sys/stat.h>
+
 #include "getopt.h"
 
 #define UHTTP_DEF_PORT 8008
@@ -37,12 +39,18 @@
 
 #define AGENT_STR "Server: small JSON web server"
 
-#define CONTENT_JSON "Content-Type: application/json"
-#define CONTENT_HTML "Content-Type: text/html"
+#define CONTENT_JSON    "Content-Type: application/json"
+#define CONTENT_HTML    "Content-Type: text/html"
+#define CONTENT_CSS     "Content-Type: text/css"
+#define CONTENT_PNG     "Content-Type: image/png"
+#define CONTENT_GIF     "Content-Type: image/gif"
+#define CONTENT_JPG     "Content-Type: image/jpg"
+#define CONTENT_JS      "Content-Type: text/javascript"
 
 typedef struct header_info_t
 {
     char action[NAME_LEN];
+    char fname[NAME_LEN];    
     char fpath[NAME_LEN];
     char method[NAME_LEN];
     // char date[NAME_LEN];
@@ -87,8 +95,28 @@ int sock_create(uint16_t port)
     return sockfd;
 }
 
+char* contentTypeGet(char *path)
+{
+	if (strstr(path, ".css"))
+        return CONTENT_CSS;
+        
+	if (strstr(path, ".js"))
+        return CONTENT_JS;
+        
+	if (strstr(path, ".png"))
+        return CONTENT_PNG;
+        
+    if (strstr(path, ".gif"))
+        return CONTENT_GIF;
+
+    if (strstr(path, ".jpg"))
+    return CONTENT_JPG;
+        
+    return CONTENT_HTML;
+}
+
 int fill_resp_header(char *buf, char *status, char *agent, char *date,
-                     char *ctype)
+                     char *ctype, size_t clen)
 {
     int n = 0;
     int remain_size = MAX_BUF_SIZE;
@@ -115,6 +143,13 @@ int fill_resp_header(char *buf, char *status, char *agent, char *date,
         n += snprintf(&buf[n], remain_size, "%s\r\n", ctype);
         remain_size -= n;
     }
+
+    if (clen)
+    {
+        n += snprintf(&buf[n], remain_size, "Content-Length: %lu\r\n", clen);
+        remain_size -= n;
+    }
+
     // end of header
     n += snprintf(&buf[n], remain_size, "\r\n");
 
@@ -186,7 +221,7 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
 
     memset(tempbuf, 0, sizeof(tempbuf));
     memset(header, 0, sizeof(HEADER_INFO_T));
-
+       
     // GET or POST
     h = buf;
     p = strchr(h, (int)' ');
@@ -197,7 +232,7 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
         len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
         memcpy(header->action, h, len);
     }
-
+    
     // File
     h = p + 1;
     p = strchr(h, (int)' ');
@@ -209,6 +244,7 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
     if (h[0])
     {
         len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
+        memcpy(header->fname, h, len);
 
         memcpy(tempbuf, g_local_folder, strlen(g_local_folder));
         memcpy(&tempbuf[strlen(g_local_folder)], h, len);
@@ -277,7 +313,9 @@ void proc_req(int so)
         if (h_line.fpath[0] != 0)
         {
             fp = fopen(h_line.fpath, "rb");
-            pcont = CONTENT_HTML;
+
+            // Content type
+            pcont = contentTypeGet(h_line.fpath);
         }
     }
     else
@@ -296,8 +334,18 @@ void proc_req(int so)
 
     if (fp != NULL)
     {
+        int fd;
+        struct stat st;
+        char ctbuf[64];
+
+        fd = fileno(fp);        
+        fstat(fd, &st);
+        clen = st.st_size;
+        fprintf(stderr, "file %s (fd=%d), type %s, size %d\n", h_line.fname, fd, pcont, clen);
+
         status = STATUS_200;
-        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, pcont);
+        
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, pcont, st.st_size);
         n = send(so, sbuf, len, 0);
 
         while ((len = fread(sbuf, 1, sizeof(sbuf), fp)) > 0)
@@ -310,7 +358,7 @@ void proc_req(int so)
     else
     {
         status = STATUS_404;
-        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, CONTENT_HTML);
+        len = fill_resp_header(sbuf, status, AGENT_STR, NULL, CONTENT_HTML, 0);
         n = send(so, sbuf, len, 0);
     }
 
