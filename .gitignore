@@ -12,7 +12,9 @@ Win32
 macos
 trendnet
 .cmaketools.json
-
+__pycache__
+tmp
+*.js
 
 
 

@@ -29,7 +29,7 @@
 #endif
 
 #define MAX_BUF_SIZE 1024
-#define NAME_LEN 64
+#define NAME_LEN 128
 
 #define LOCAL_FOLDER "./local/"     // the mapped folder
 #define METHOD_FOLDER "./web-data/" // the mapped folder
@@ -277,6 +277,7 @@ int parse_header(HEADER_INFO_T *header, char *buf, int buf_len)
         h++; // skip '"'
         if ((p = strchr(h, '"')) != NULL)
         {
+            /* FIXME, has no consider buffer constraint, may overflow !!! */
             len = (int)(p - h) > NAME_LEN ? NAME_LEN - 1 : (int)(p - h);
 
             memcpy(header->method, g_method_folder, strlen(g_method_folder));
